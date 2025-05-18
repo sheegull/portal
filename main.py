@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 def run_all():
     # 環境変数の読み込み
     load_dotenv()
-    
+
     # 出力ディレクトリを設定（環境変数がなければデフォルト）
     OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "./output")
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -19,13 +19,13 @@ def run_all():
 
     # 各情報源の処理を実行
     handlers = [
-        PaperSummarizer(),
-        HackerNewsRetriever(),
+        TechFeed(),
         RedditExplorer(),
         GithubTrending(),
-        TechFeed(),
+        PaperSummarizer(),
+        HackerNewsRetriever(),
     ]
-    
+
     for handler in handlers:
         print(f"Running {handler.__class__.__name__}...")
         handler()

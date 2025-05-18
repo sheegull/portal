@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
+from pprint import pprint
 
 import requests
 import tomllib
@@ -19,6 +20,7 @@ _MARKDOWN_FORMAT = """
 
 class Config:
     url_format = "https://github.com/trending/{language}?since=daily"
+    default_url = "https://github.com/trending?since=daily"
     summary_index_s3_key_format = "github_trending/{date}.md"
 
     @classmethod
@@ -40,12 +42,28 @@ class GithubTrending:
         self._languages = Config.load_languages()
 
     def __call__(self) -> None:
-        markdowns = []
+        markdowns: list[str] = []
+
+        # 1. Daily Trends
+        markdowns.append("# Daily Trends\n")
+        daily_repos = self._retrieve_repositories(Config.default_url)
+        markdowns += [
+            self._stylize_repository_info(repo)
+            for repo in daily_repos
+        ]
+
+        # 2. Language Trends
         for language in self._languages:
-            new_repositories = self._retrieve_repositories(
+            header = f"# {language.capitalize()} Trends\n"
+            markdowns.append(header)
+            lang_repos = self._retrieve_repositories(
                 Config.url_format.format(language=language)
             )
-            markdowns += [self._stylize_repository_info(repository) for repository in new_repositories]
+            markdowns += [
+                self._stylize_repository_info(repo)
+                for repo in lang_repos
+            ]
+
         self._store_summaries(markdowns)
 
     def _retrieve_repositories(self, url: str) -> list[Repository]:
