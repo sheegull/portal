@@ -1,10 +1,16 @@
 [[feeds]]
 key = "scale_ai_blog"
 name = "Scale AI Blog"
-url = "https://morss.it/:items=%7C%7C*[class=%CF%81th]/https://scale.com/blog"
+url = "https://scale.com/blog"
 
 
 [[feeds]]
-key = "simon_willison_blog"
-name = "Simon Willison's Blog"
-url = "https://simonwillison.net/atom/everything/"
+key = "meta_ai_blog"
+name = "Meta AI Blog"
+url = "https://ai.meta.com/blog"
+
+
+# [[feeds]]
+# key = "simon_willison_blog"
+# name = "Simon Willison's Blog"
+# url = "https://simonwillison.net/atom/everything/"
