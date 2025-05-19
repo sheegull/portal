@@ -25,6 +25,9 @@ app_names = [
     "paper_summarizer",
     "reddit_explorer",
     "tech_feed",
+    "sns_feed",
+    "blog_feed",
+    "benchmark_feed",
 ]
 
 WEATHER_ICONS = {

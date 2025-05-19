@@ -711,8 +711,9 @@
           <div class="content-container">
             <ul class="nav nav-tabs" id="appTabs" role="tablist">
               {% set tab_names = { 'github_trending': 'Github', 'hacker_news': 'News',
-              'paper_summarizer': 'Papers', 'reddit_explorer': 'Reddit', 'tech_feed': 'Tech' } %} {%
-              for app in app_names %}
+              'paper_summarizer': 'Papers', 'reddit_explorer': 'Reddit', 'tech_feed': 'Tech',
+              'sns_feed': 'sns', 'blog_feed': 'blog', 'benchmark_feed': 'mark' } %} {% for app in
+              app_names %}
               <li class="nav-item" role="presentation">
                 <button
                   class="nav-link {% if loop.first %}active{% endif %}"
