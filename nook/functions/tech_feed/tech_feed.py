@@ -3,6 +3,7 @@ import inspect
 import os
 import time
 import traceback
+import calendar
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -47,7 +48,8 @@ class TechFeed:
     def __init__(self) -> None:
         self._client = create_client()
         self._tech_feed_urls = Config.load_feeds()
-        self._threshold = datetime.now() - timedelta(days=Config.threshold_days)
+        # UTC基準でフィルタリング
+        self._threshold = datetime.now(timezone.utc) - timedelta(days=Config.threshold_days)
 
     def __call__(self) -> None:
         markdowns = []
@@ -58,7 +60,7 @@ class TechFeed:
             entries = self._filter_entries(feed_parser)
             print(f"Filtered entries count: {len(entries)}")
             if len(entries) > Config.tech_feed_max_entries_per_day:
-                entries = entries[:Config.tech_feed_max_entries_per_day]
+                entries = entries[: Config.tech_feed_max_entries_per_day]
             for entry in entries:
                 try:
                     article = self._retrieve_article(entry, feed_name=feed_name)
@@ -75,21 +77,18 @@ class TechFeed:
         self._store_summaries(markdowns)
 
     def _filter_entries(self, feed_parser: feedparser.FeedParserDict) -> list[dict[str, Any]]:
-        filtered_entries = []
+        filtered_entries: list[dict[str, Any]] = []
         for entry in feed_parser["entries"]:
-            date_ = entry.get("date_parsed") or entry.get("published_parsed")
-
-            if not date_:
-                print(f"date_ is None for entry: {entry.get('link', 'unknown')}")
+            tm = entry.get("date_parsed") or entry.get("published_parsed")
+            if not tm:
+                print(f"date_parsed is None for entry: {entry.get('link', 'unknown')}")
                 continue
-
             try:
-                published_dt = datetime.fromtimestamp(time.mktime(date_))
-                # published_dt = published_dt.replace(tzinfo=timezone.utc)  # タイムゾーンを設定
+                # tm は time.struct_time として UTC のパース済み値とみなす
+                ts = calendar.timegm(tm)
+                published_dt = datetime.fromtimestamp(ts, tz=timezone.utc)
                 if published_dt > self._threshold:
                     filtered_entries.append(entry)
-                # else:
-                #     print(f"Entry too old: {entry.get('title', 'unknown')} ({published_dt})")
             except Exception as e:
                 print(f"Error converting date for {entry.get('link', 'unknown')}: {e}")
                 traceback.print_exc()
@@ -101,7 +100,9 @@ class TechFeed:
             response = requests.get(entry.link)
             soup = BeautifulSoup(response.text, "html.parser")
             text = "\n".join(
-                [p.get_text() for p in soup.find_all(["p", "code", "ul", "h1", "h2", "h3", "h4", "h5", "h6"])]
+                [p.get_text() for p in soup.find_all(
+                    ["p", "code", "ul", "h1", "h2", "h3", "h4", "h5", "h6"]
+                )]
             )
             return Article(
                 feed_name=feed_name,
@@ -160,6 +161,5 @@ class TechFeed:
         )
 
 if __name__ == "__main__":
-    # テスト用コード
     tech_feed = TechFeed()
     tech_feed()
