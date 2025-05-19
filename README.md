@@ -12,7 +12,9 @@
   <img src="assets/screenshots/nook-demo.gif" alt="Nook Demo" width="700">
 </p>
 
-## フォーク版導入方法
+## nook portal版導入方法
+### [nook](https://github.com/discus0434/nook)をカスタマイズしたものです。
+
 
 Ubuntuで動かす前提での導入方法です。（WSL2でも可）
 
