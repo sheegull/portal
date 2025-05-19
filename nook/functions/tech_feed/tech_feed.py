@@ -4,7 +4,7 @@ import os
 import time
 import traceback
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 import feedparser
@@ -78,11 +78,14 @@ class TechFeed:
         filtered_entries = []
         for entry in feed_parser["entries"]:
             date_ = entry.get("date_parsed") or entry.get("published_parsed")
+
             if not date_:
                 print(f"date_ is None for entry: {entry.get('link', 'unknown')}")
                 continue
+
             try:
                 published_dt = datetime.fromtimestamp(time.mktime(date_))
+                # published_dt = published_dt.replace(tzinfo=timezone.utc)  # タイムゾーンを設定
                 if published_dt > self._threshold:
                     filtered_entries.append(entry)
                 else:

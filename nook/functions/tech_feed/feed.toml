@@ -12,3 +12,8 @@ url = "https://deepmind.google/blog/rss.xml"
 key = "openai_news"
 name = "OpenAI News"
 url = "https://openai.com/news/rss.xml"
+
+[[feeds]]
+key = "simon_willison_blog"
+name = "Simon Willison's Blog"
+url = "https://simonwillison.net/atom/everything/"
