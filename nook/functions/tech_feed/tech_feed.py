@@ -88,8 +88,8 @@ class TechFeed:
                 # published_dt = published_dt.replace(tzinfo=timezone.utc)  # タイムゾーンを設定
                 if published_dt > self._threshold:
                     filtered_entries.append(entry)
-                else:
-                    print(f"Entry too old: {entry.get('title', 'unknown')} ({published_dt})")
+                # else:
+                #     print(f"Entry too old: {entry.get('title', 'unknown')} ({published_dt})")
             except Exception as e:
                 print(f"Error converting date for {entry.get('link', 'unknown')}: {e}")
                 traceback.print_exc()

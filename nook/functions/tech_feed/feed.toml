@@ -17,3 +17,14 @@ url = "https://openai.com/news/rss.xml"
 key = "simon_willison_blog"
 name = "Simon Willison's Blog"
 url = "https://simonwillison.net/atom/everything/"
+
+
+[[feeds]]
+key = "daring_fireball"
+name = "Daring Fireball"
+url = "https://morss.it/https://daringfireball.net/"
+
+[[feeds]]
+key = "scale_ai_blog"
+name = "Scale AI Blog"
+url = "https://morss.it/:items=%7C%7C*[class=%CF%81th]/https://scale.com/blog"
