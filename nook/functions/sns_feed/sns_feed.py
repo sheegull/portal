@@ -1,10 +1,13 @@
+# YouTube, Podcast(Spotify, Apple Podcast)に対応
 import inspect
 import os
 import time
 import traceback
+import calendar
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Optional
+import re
 
 import feedparser
 import requests
@@ -12,12 +15,16 @@ import tomllib
 from bs4 import BeautifulSoup
 from ..common.python.gemini_client import create_client
 
+_THUMBNAIL_WIDTH = 480
+
 _MARKDOWN_FORMAT = """
 # {title}
 
 [View on {feed_name}]({url})
 
 {summary}
+
+{thumbnail_card}
 """
 
 class Config:
@@ -39,78 +46,136 @@ class Article:
     url: str
     text: str
     soup: BeautifulSoup
-    category: str | None = field(default=None)
-    summary: list[str] = field(init=False)
+    rss_summary: str
+    thumbnail_url: Optional[str] = None
+    summary: str = field(init=False)
 
 class SnsFeed:
     def __init__(self) -> None:
         self._client = create_client()
         self._sns_feed_urls = Config.load_feeds()
-        self._threshold = datetime.now() - timedelta(days=Config.threshold_days)
+        # UTC基準でフィルタリング
+        self._threshold = datetime.now(timezone.utc) - timedelta(days=Config.threshold_days)
 
     def __call__(self) -> None:
-        markdowns = []
+        markdowns: list[str] = []
         for feed_name, feed_url in self._sns_feed_urls.items():
             print(f"Processing feed: {feed_name} ({feed_url})")
             feed_parser: feedparser.FeedParserDict = feedparser.parse(feed_url)
+            feed_image = None
+            if hasattr(feed_parser.feed, "image") and feed_parser.feed.image and feed_parser.feed.image.href:
+                feed_image = feed_parser.feed.image.href
             print(f"Feed entries count: {len(feed_parser['entries'])}")
             entries = self._filter_entries(feed_parser)
             print(f"Filtered entries count: {len(entries)}")
             if len(entries) > Config.sns_feed_max_entries_per_day:
-                entries = entries[:Config.sns_feed_max_entries_per_day]
+                entries = entries[: Config.sns_feed_max_entries_per_day]
             for entry in entries:
                 try:
-                    article = self._retrieve_article(entry, feed_name=feed_name)
-                    print(f"Retrieved article: {article.title}")
-                    article.summary = self._summarize_article(article)
-                    print(f"Summarized article: {article.title}")
+                    article = self._build_article(entry, feed_name, feed_image)
+                    print(f"Built article: {article.title}")
+
+                    if not article.rss_summary.strip():
+                        article.summary = article.text
+                    else:
+                        article.summary = self._summarize_article(article)
+
+                    print(f"Generated summary for: {article.title}")
                     markdowns.append(self._stylize_article(article))
                 except Exception as e:
-                    print(f"Error processing article {entry.get('link', 'unknown')}: {e}")
+                    print(f"Error processing entry {entry.get('link', 'unknown')}: {e}")
                     traceback.print_exc()
                     continue
-            time.sleep(2)  # APIリクエストの制限を避ける
+                time.sleep(2)  # APIリクエスト制限回避
         print(f"Total markdowns generated: {len(markdowns)}")
         self._store_summaries(markdowns)
 
     def _filter_entries(self, feed_parser: feedparser.FeedParserDict) -> list[dict[str, Any]]:
-        filtered_entries = []
+        filtered_entries: list[dict[str, Any]] = []
         for entry in feed_parser["entries"]:
-            date_ = entry.get("date_parsed") or entry.get("published_parsed")
-
-            if not date_:
-                print(f"date_ is None for entry: {entry.get('link', 'unknown')}")
+            tm = entry.get("date_parsed") or entry.get("published_parsed")
+            if not tm:
                 continue
-
             try:
-                published_dt = datetime.fromtimestamp(time.mktime(date_))
-                # published_dt = published_dt.replace(tzinfo=timezone.utc)  # タイムゾーンを設定
+                ts = calendar.timegm(tm)
+                published_dt = datetime.fromtimestamp(ts, tz=timezone.utc)
                 if published_dt > self._threshold:
                     filtered_entries.append(entry)
-                # else:
-                #     print(f"Entry too old: {entry.get('title', 'unknown')} ({published_dt})")
-            except Exception as e:
-                print(f"Error converting date for {entry.get('link', 'unknown')}: {e}")
-                traceback.print_exc()
+            except Exception:
                 continue
         return filtered_entries
 
-    def _retrieve_article(self, entry: dict[str, Any], feed_name: str) -> Article:
-        try:
-            response = requests.get(entry.link)
-            soup = BeautifulSoup(response.text, "html.parser")
-            text = "\n".join(
-                [p.get_text() for p in soup.find_all(["p", "code", "ul", "h1", "h2", "h3", "h4", "h5", "h6"])]
+    def _build_article(
+        self, entry: dict[str, Any], feed_name: str, feed_image: Optional[str]
+    ) -> Article:
+        html = (
+            entry.get("itunes_summary", "")
+            or entry.get("summary", "")
+            or entry.get("description", "")
+        )
+        soup = BeautifulSoup(html, "html.parser")
+        text = soup.get_text().strip()
+        thumbnail = None
+
+        # YouTube のサムネイル
+        if "youtube.com/watch" in entry.link or "youtu.be/" in entry.link:
+            vid = re.search(r"(?:v=|youtu\.be/)([A-Za-z0-9_-]+)", entry.link)
+            if vid:
+                thumbnail = f"https://img.youtube.com/vi/{vid.group(1)}/hqdefault.jpg"
+
+        # podcast 系（itunes:image または チャンネル画像）
+        elif entry.get("itunes_image", None):
+            it_img = entry.get("itunes_image")
+            thumbnail = it_img.href if hasattr(it_img, "href") else it_img
+        elif feed_image:
+            thumbnail = feed_image
+
+        if not text:
+            text = self._translate_title(entry.title)
+
+        return Article(
+            feed_name=feed_name,
+            title=entry.title,
+            url=entry.link,
+            text=text,
+            soup=soup,
+            rss_summary=html,
+            thumbnail_url=thumbnail,
+        )
+
+    def _translate_title(self, title: str) -> str:
+        prompt = f"次の英語タイトルを日本語に翻訳してください:\n\n{title}"
+        return self._client.generate_content(
+            contents=prompt,
+            system_instruction="ユーザーが与えた英語のタイトルを自然で読みやすい日本語に翻訳してください。必ず一案の翻訳を出力してください。"
             )
-            return Article(
-                feed_name=feed_name,
-                title=entry.title,
-                url=entry.link,
-                text=text,
-                soup=soup,
+
+    def _stylize_article(self, article: Article) -> str:
+        if article.thumbnail_url:
+            thumbnail_card = (
+                f'<a href="{article.url}" target="_blank">'
+                f'<img src="{article.thumbnail_url}" '
+                f'alt="thumbnail" width="{_THUMBNAIL_WIDTH}" />'
+                f'</a>'
             )
-        except Exception as e:
-            raise Exception(f"Error raised while retrieving article: {e}") from e
+        else:
+            thumbnail_card = ""
+        return _MARKDOWN_FORMAT.format(
+            title=article.title,
+            feed_name=article.feed_name,
+            url=article.url,
+            summary=article.summary,
+            thumbnail_card=thumbnail_card,
+        )
+
+    def _summarize_article(self, article: Article) -> str:
+        return self._client.generate_content(
+            contents=self._contents_format.format(
+                title=article.title,
+                text=article.text
+            ),
+            system_instruction=self._system_instruction,
+        )
 
     def _store_summaries(self, summaries: list[str]) -> None:
         date_str = date.today().strftime("%Y-%m-%d")
@@ -123,28 +188,13 @@ class SnsFeed:
             f.write("\n---\n".join(summaries))
         print(f"Saved summaries to {file_path}")
 
-    def _stylize_article(self, article: Article) -> str:
-        return _MARKDOWN_FORMAT.format(
-            title=article.title,
-            feed_name=article.feed_name,
-            url=article.url,
-            summary=article.summary,
-        )
-
-    def _summarize_article(self, article: Article) -> str:
-        # RSSフィードのdescriptionを要約するように変更
-        return self._client.generate_content(
-            contents=self._contents_format.format(title=article.title, text=article.soup.find("description").text if article.soup.find("description") else article.text),
-            system_instruction=self._system_instruction,
-        )
-
     @property
     def _system_instruction(self) -> str:
         return inspect.cleandoc(
             """
-            ユーザーから記事のタイトルと文章が与えられるので、内容をよく読み、日本語で詳細な要約を作成してください。
+            ユーザーからSNSコンテンツのタイトルと説明文が与えられるので、内容をよく読み、日本語で詳細な要約を作成してください。
             与えられる文章はHTMLから抽出された文章なので、一部情報が欠落していたり、数式、コード、不必要な文章などが含まれている場合があります。
-            要約以外の出力は不要です。
+            要約以外の出力は不要です。SNSへのリンクやクレジットなどは含めないでください。記載されていない内容は出力しないでください。
             """
         )
 
@@ -159,7 +209,7 @@ class SnsFeed:
             """
         )
 
+
 if __name__ == "__main__":
-    # テスト用コード
     sns_feed = SnsFeed()
     sns_feed()
