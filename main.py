@@ -6,7 +6,7 @@ from nook.functions.hacker_news.hacker_news import HackerNewsRetriever
 from nook.functions.reddit_explorer.reddit_explorer import RedditExplorer
 from nook.functions.github_trending.github_trending import GithubTrending
 from nook.functions.tech_feed.tech_feed import TechFeed
-from nook.functions.sns.sns import SnsFeed
+from nook.functions.sns_feed.sns_feed import SnsFeed
 from nook.functions.benchmark_feed.benchmark_feed import BenchmarkFeed
 from nook.functions.blog_feed.blog_feed import BlogFeed
 from dotenv import load_dotenv
@@ -22,12 +22,13 @@ def run_all():
 
     # 各情報源の処理を実行
     handlers = [
+        SnsFeed(),
+        RedditExplorer(),
         TechFeed(),
         RedditExplorer(),
         GithubTrending(),
         PaperSummarizer(),
         HackerNewsRetriever(),
-        SnsFeed(),
         BenchmarkFeed(),
         BlogFeed(),
     ]

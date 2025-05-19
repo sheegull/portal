@@ -1,0 +1,21 @@
+[[feeds]]
+key = "tbpn_youtube"
+name = "TBPN YouTube"
+url = "https://www.youtube.com/feeds/videos.xml?channel_id=UC-DRzaGnL_vtBUpCFH5M0tg"
+
+
+[[feeds]]
+key = "coten_radio"
+name = "歴史を面白く学ぶコテンラジオ"
+url = "https://anchor.fm/s/8c2088c/podcast/rss"
+
+
+[[feeds]]
+key = "utyukaigi"
+name = "佐藤航陽の宇宙会議"
+url = "https://anchor.fm/s/10050c304/podcast/rss"
+
+[[feeds]]
+key = "chinatalk"
+name = "ChinaTalk"
+url = "https://www.youtube.com/feeds/videos.xml?channel_id=UCXOtILmQEo3pL_1bJfUOFWw"
