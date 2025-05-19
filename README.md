@@ -12,13 +12,9 @@
   <img src="assets/screenshots/nook-demo.gif" alt="Nook Demo" width="700">
 </p>
 
-## フォーク版概要
-
-これは[@IMG_5955](https://x.com/IMG_5955)さんが開発したNookからAWS依存部分を無くしてローカルで動かせるようにしたものです。自宅サーバでの運用を想定してます。
-
 ## フォーク版導入方法
 
-とりま、Ubuntuで動かす前提での導入方法です。（WSL2でも可）
+Ubuntuで動かす前提での導入方法です。（WSL2でも可）
 
 1. **リポジトリをクローン**
    ```bash
@@ -57,9 +53,9 @@
    サーバ起動した状態でブラウザからhttp://localhost:8080 にアクセスすると閲覧できます。
 
 6. **データ収集をcronで定期実行**
-   
+
    run_nook.sh内のPROJECT_DIRを自分の環境に合わせて編集する
-   
+
    run_nook.shに実行権限を付与
    ```bash
    chmod +x run_nook.sh
@@ -74,9 +70,9 @@
    ```
 
 8. **ビューワのサーバを永続化**
-   
+
    run_viewer.sh内のPROJECT_DIRを自分の環境に合わせて編集する
-   
+
    run_viewer.shに実行権限を付与
    ```bash
    chmod +x run_viewer.sh
@@ -111,7 +107,7 @@
    sudo systemctl status nook-viewer.service
    ```
    Active: active (running) が表示されれば成功。
-   
+
    ブラウザでhttp://localhost:8080 にアクセスし、表示を確認。
 
 ↓以下、オリジナルのREADMEです。
