@@ -15,7 +15,7 @@ import tomllib
 from bs4 import BeautifulSoup
 from ..common.python.gemini_client import create_client
 
-_THUMBNAIL_WIDTH = 480
+_THUMBNAIL_WIDTH = 300
 
 _MARKDOWN_FORMAT = """
 # {title}
