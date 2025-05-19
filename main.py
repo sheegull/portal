@@ -22,9 +22,9 @@ def run_all():
 
     # 各情報源の処理を実行
     handlers = [
-        SnsFeed(),
-        RedditExplorer(),
         TechFeed(),
+        RedditExplorer(),
+        SnsFeed(),
         RedditExplorer(),
         GithubTrending(),
         PaperSummarizer(),
